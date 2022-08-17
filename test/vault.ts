@@ -7,8 +7,8 @@ import { BigNumberish } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { MockToken } from "../typechain-types";
 
-const toWei = (num: string) => ethers.utils.parseEther(num.toString());
-const fromWei = (num: BigNumberish) => ethers.utils.formatEther(num);
+// const toWei = (num: string) => ethers.utils.parseEther(num.toString());
+// const fromWei = (num: BigNumberish) => ethers.utils.formatEther(num);
 
 describe("Vault.sol", () => {
   let owner: SignerWithAddress;
@@ -77,7 +77,44 @@ describe("Vault.sol", () => {
   });
   describe("Stage test", () => {
     describe("Check if allocate a correct value for multi-users", () => {
-      it("Should get the same money back", async () => {});
+      it("Should get the same money back", async () => {
+        const user1Deposit = 1000;
+        const user2Deposit = 2000;
+
+        // users deposit the different amount
+        await mockToken.connect(user1).approve(vault.address, user1Deposit);
+        const tx1 = vault.connect(user1).deposit(user1Deposit);
+        (await tx1).wait(1);
+
+        await mockToken.connect(user2).approve(vault.address, user2Deposit);
+        const tx2 = vault.connect(user2).deposit(user2Deposit);
+        (await tx2).wait(1);
+
+        // now the vault should have 3000 totalsupply
+        expect(await vault.totalSupply()).to.equal(user1Deposit + user2Deposit);
+
+        // now withdraw for user 1
+        const user1WithdrawAmount = 500;
+        await vault.connect(user1).withdraw(user1WithdrawAmount);
+        expect(
+          await mockToken.connect(user1).balanceOf(user1.address)
+        ).to.equal(amountToMint - user1Deposit + user1WithdrawAmount);
+
+        // now withdraw for user 2
+        const user2WithdrawAmount = 800;
+        await vault.connect(user2).withdraw(user2WithdrawAmount);
+        expect(
+          await mockToken.connect(user2).balanceOf(user2.address)
+        ).to.equal(amountToMint - user2Deposit + user2WithdrawAmount);
+
+        // expect the vault will decrease the totalsupply
+        expect(await vault.totalSupply()).to.equal(
+          user1Deposit +
+            user2Deposit -
+            user1WithdrawAmount -
+            user2WithdrawAmount
+        );
+      });
     });
   });
 });
