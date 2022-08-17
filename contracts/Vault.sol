@@ -2,6 +2,7 @@
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Vault {
     IERC20 public immutable token;
@@ -59,5 +60,7 @@ contract Vault {
 
     function withdraw(uint _shares) external {
         uint amount = (_shares * token.balanceOf(address(this))) / totalSupply;
+        _burn(msg.sender, _shares);
+        token.transfer(msg.sender, amount);
     }
 }
